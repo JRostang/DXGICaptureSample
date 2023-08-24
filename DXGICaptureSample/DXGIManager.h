@@ -1,24 +1,17 @@
 #pragma once
 
 #include <windows.h>
-#include <atlbase.h>
 #include <DXGITYPE.h>
 #include <DXGI1_2.h>
 #include <d3d11.h>
 #include <Wincodec.h>
 #include <vector>
+#include <wrl.h>
+
 
 using namespace std;
-
+using Microsoft::WRL::ComPtr;
 class DXGIPointerInfo;
-
-enum CaptureSource
-{
-	CSUndefined,
-	CSMonitor1,
-	CSMonitor2,
-	CSDesktop
-};
 
 class DXGIPointerInfo
 {
@@ -53,11 +46,11 @@ public:
 	bool IsPrimary();
 
 private:
-	CComPtr<IDXGIAdapter1> m_Adapter;
-	CComPtr<ID3D11Device> m_D3DDevice;
-	CComPtr<ID3D11DeviceContext> m_D3DDeviceContext;
-	CComPtr<IDXGIOutput1> m_DXGIOutput1;
-	CComPtr<IDXGIOutputDuplication> m_DXGIOutputDuplication;
+	ComPtr<IDXGIAdapter1> m_Adapter;
+	ComPtr<ID3D11Device> m_D3DDevice;
+	ComPtr<ID3D11DeviceContext> m_D3DDeviceContext;
+	ComPtr<IDXGIOutput1> m_DXGIOutput1;
+	ComPtr<IDXGIOutputDuplication> m_DXGIOutputDuplication;
 };
 
 class DXGIManager
@@ -65,9 +58,8 @@ class DXGIManager
 public:
 	DXGIManager();
 	~DXGIManager();
-	HRESULT SetCaptureSource(CaptureSource type);
-	CaptureSource GetCaptureSource();
 
+	HRESULT setCaptureWindow(HWND windowHandle);
 	HRESULT GetOutputRect(RECT& rc);
 	HRESULT GetOutputBits(BYTE* pBits, RECT& rcDest);
 private:
@@ -76,14 +68,14 @@ private:
 	vector<DXGIOutputDuplication> GetOutputDuplication();
 	void DrawMousePointer(BYTE* pDesktopBits, RECT rcDesktop, RECT rcDest);
 private:
-	CComPtr<IDXGIFactory1> m_spDXGIFactory1;
+	ComPtr<IDXGIFactory1> m_spDXGIFactory1;
 	vector<DXGIOutputDuplication> m_vOutputs;
 	bool m_bInitialized;
-	CaptureSource m_CaptureSource;
 	RECT m_rcCurrentOutput;
 	BYTE* m_pBuf;
+	HWND m_windowHandle;
 
-	CComPtr<IWICImagingFactory> m_spWICFactory;
+	ComPtr<IWICImagingFactory> m_spWICFactory;
 	ULONG_PTR m_gdiplusToken;
 	DXGIPointerInfo* m_pDXGIPointer;
 };

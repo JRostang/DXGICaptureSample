@@ -14,10 +14,13 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	CoInitialize(NULL);
 
-	g_DXGIManager.SetCaptureSource(CSDesktop);
+	HWND window = FindWindow(nullptr, L"Media Player");
 
+	g_DXGIManager.setCaptureWindow(window);
+
+	//Dimensions of the window to grab
 	RECT rcDim;
-	g_DXGIManager.GetOutputRect(rcDim);
+	GetClientRect(window, &rcDim);
 
 	DWORD dwWidth = rcDim.right - rcDim.left;
 	DWORD dwHeight = rcDim.bottom - rcDim.top;
@@ -28,49 +31,44 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	BYTE* pBuf = new BYTE[dwBufSize];
 
-	CComPtr<IWICImagingFactory> spWICFactory = NULL;
-	HRESULT hr = spWICFactory.CoCreateInstance(CLSID_WICImagingFactory);
-	if( FAILED(hr) )
-		return hr;
+	ComPtr<IWICImagingFactory> spWICFactory = NULL;
+	HRESULT hr = CoCreateInstance( CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory), (void**)&spWICFactory);
+	if(FAILED(hr)) return hr;
 
 	int i=0;
-	do
-	{
+	do {
 		hr = g_DXGIManager.GetOutputBits(pBuf, rcDim);
 		i++;
 	}
 	while (hr == DXGI_ERROR_WAIT_TIMEOUT || i < 2);
 
-	if( FAILED(hr) )
-	{
-		printf("GetOutputBits failed with hr=0x%08x\n", hr);
-		return hr;
-	}
+	//////////////////////////////////////////////////////////////////////////////////////
+	if(FAILED(hr)) { printf("GetOutputBits failed with hr=0x%08x\n", hr); return hr; }
 
 	printf("Saving capture to file\n");
 
-	CComPtr<IWICBitmap> spBitmap = NULL;
+	ComPtr<IWICBitmap> spBitmap = NULL;
 	hr = spWICFactory->CreateBitmapFromMemory(dwWidth, dwHeight, GUID_WICPixelFormat32bppBGRA, dwWidth*4, dwBufSize, (BYTE*)pBuf, &spBitmap);
 	if( FAILED(hr) )
 		return hr;
 		
-	CComPtr<IWICStream> spStream = NULL;
+	ComPtr<IWICStream> spStream = NULL;
 
 	hr = spWICFactory->CreateStream(&spStream);
 	if (SUCCEEDED(hr)) {
-		hr = spStream->InitializeFromFilename(L"capture.bmp", GENERIC_WRITE);
+		hr = spStream->InitializeFromFilename(L"D:/Barco/Dev/DXGICaptureSample-master/Debug/capture.bmp", GENERIC_WRITE);
 	}
 
-	CComPtr<IWICBitmapEncoder> spEncoder = NULL;
+	ComPtr<IWICBitmapEncoder> spEncoder = NULL;
 	if (SUCCEEDED(hr)) {
 		hr = spWICFactory->CreateEncoder(GUID_ContainerFormatBmp, NULL, &spEncoder);
 	}
 
 	if (SUCCEEDED(hr)) {
-		hr = spEncoder->Initialize(spStream,WICBitmapEncoderNoCache);
+		hr = spEncoder->Initialize(spStream.Get(), WICBitmapEncoderNoCache);
 	}
 
-	CComPtr<IWICBitmapFrameEncode> spFrame = NULL;
+	ComPtr<IWICBitmapFrameEncode> spFrame = NULL;
 	if (SUCCEEDED(hr)) {
 		hr = spEncoder->CreateNewFrame(&spFrame, NULL);
 	}
@@ -91,7 +89,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	}
 
 	if (SUCCEEDED(hr)) {
-		hr = spFrame->WriteSource(spBitmap, NULL);
+		hr = spFrame->WriteSource(spBitmap.Get(), NULL);
 	}
 		
 	if (SUCCEEDED(hr)) {
